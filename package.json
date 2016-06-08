@@ -1,0 +1,30 @@
+{
+  "name": "hangouts-youtube-socket-server",
+  "version": "1.0.0",
+  "description": "The socket server of youtube app for hangouts project",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zillding/hangouts-youtube-socket-server.git"
+  },
+  "scripts": {
+    "prebuild": "npm run lint",
+    "build": "babel src -d lib",
+    "start": "babel-node src/index",
+    "start:prod": "node lib/index",
+    "lint": "eslint src",
+    "herokku-postbuild": "npm run build"
+  },
+  "author": "Zill Ding",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.13.4",
+    "immutable": "^3.8.1",
+    "socket.io": "^1.4.6"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.9.0",
+    "babel-preset-es2015": "^6.9.0",
+    "eslint": "^2.11.1",
+    "rimraf": "^2.5.2"
+  }
+}
