@@ -1,6 +1,8 @@
 import express from 'express';
 import { Server } from 'http';
+
 import setUpSocket from './setUpSocket';
+import { log, logError } from './utils';
 
 const app = express();
 const server = Server(app);
@@ -12,8 +14,8 @@ const port = process.env.PORT || 3000;
 // Start  app.
 server.listen(port, err => {
   if (err) {
-    return console.error(err);
+    return logError('Error', err);
   }
 
-  console.log(`server started at port: ${port}`);
+  log(`Server started at port: ${port}`);
 });

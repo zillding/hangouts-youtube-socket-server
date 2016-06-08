@@ -1,6 +1,8 @@
 import { List } from 'immutable';
 import  socketIO from 'socket.io';
 
+import { log } from './utils';
+
 // socket middleware on the server side to handle
 // client requests for YouTube app based on socket.io
 
@@ -66,12 +68,18 @@ function updateData(room, field, data) {
 
 function setUpSocket(server) {
   const io = socketIO(server);
-  console.log(io);
+
+  log('Socket done set up.');
 
   io.on('connection', socket => {
+
+    log(`New connected detected with socket id: ${socket.id}`);
+
     let room = 'default';
 
     socket.on('new user', ({ data }) => {
+      log(`Event [new user] received with data: ${data}`);
+
       room = data.trim() || room;
       socket.join(room);
 
@@ -96,6 +104,9 @@ function setUpSocket(server) {
     });
 
     socket.on('action', ({ type, data }) => {
+
+      log(`Event [action] received with type: ${type}`);
+
       io.in(room).emit('action', {
         type,
         data,
@@ -116,9 +127,15 @@ function setUpSocket(server) {
     });
 
     socket.on('disconnect', () => {
+
+      log(`Socket with id: ${socket.id} disconnected.`);
+
       // clean up the room data if all users left
       const socketRoom = io.sockets.adapter.rooms[room];
       if (socketRoom && socketRoom.length === 0) {
+
+        log(`Room: ${room} is empty.`);
+
         deleteRoom(room);
       }
     });
