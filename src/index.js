@@ -9,6 +9,9 @@ const server = Server(app);
 
 setUpSocket(server);
 
+// static files
+app.use(express.static(`${__dirname}/../public`));
+
 const port = process.env.PORT || 3000;
 
 // Start  app.

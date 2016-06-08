@@ -58,12 +58,16 @@ function initRoom(name) {
 }
 
 function deleteRoom(name) {
-  delete rooms[name];
+  if (rooms[name]) {
+    delete rooms[name];
+  }
 }
 
 // mutate the global state
 function updateData(room, field, data) {
-  rooms[room][field] = data;
+  if (rooms[room]) {
+    rooms[room][field] = data;
+  }
 }
 
 function setUpSocket(server) {
@@ -73,15 +77,17 @@ function setUpSocket(server) {
 
   io.on('connection', socket => {
 
-    log(`New connected detected with socket id: ${socket.id}`);
+    log(`New connection detected with socket id: ${socket.id}`);
 
-    let room = 'default';
+    let room = '';
 
     socket.on('new user', ({ data }) => {
       log(`Event [new user] received with data: ${data}`);
 
       room = data.trim() || room;
       socket.join(room);
+
+      log(`User with socket id: ${socket.id} joined room: ${room}`);
 
       if (!rooms[room]) {
         initRoom(room);
