@@ -12,7 +12,7 @@
     "start": "babel-node src/index",
     "start:prod": "node lib/index",
     "lint": "eslint src",
-    "herokku-postbuild": "npm run build"
+    "heroku-postbuild": "npm run build"
   },
   "author": "Zill Ding",
   "license": "MIT",
