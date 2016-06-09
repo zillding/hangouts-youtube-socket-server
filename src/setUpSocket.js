@@ -3,50 +3,6 @@ import  socketIO from 'socket.io';
 
 import { log } from './utils';
 
-// socket middleware on the server side to handle
-// client requests for YouTube app based on socket.io
-
-// action type possible values and corresponding payload data
-// 'ADD_VIDEO': [object: video data]
-// 'DELETE_VIDEO': [number: index]
-// 'PLAY': [string: videoId]
-// 'PLAY_NEXT': no data
-// 'PLAY_PREVIOUS': no data
-// 'PAUSE': no data
-// 'RESUME': no data
-// 'SYNC_TIME: [number: play time]
-
-/**
- * events received:
-
-'new user': {
-  data: [string: roomName]
-}
-
-'action': {
-  type: [string: one of action type values]
-  data: [object|number|string: corresponding payload data]
-}
-
- */
-
-/**
- * events fired:
-
-'welcome': {
-  data: {
-    playlist: [array: playlist data in current room]
-  }
-}
-
-'action': {
-  type: [string: one of action type values]
-  data: [object|number|string: corresponding payload data]
-  senderId: [string: socket id of the sender of this action]
-}
-
- */
-
 // Global state data
 const rooms = {};
 
@@ -79,6 +35,8 @@ function setUpSocket(server) {
 
     log(`New connection detected with socket id: ${socket.id}`);
 
+    // TODO: send initial stats
+
     let room = '';
 
     socket.on('new user', ({ data }) => {
@@ -89,8 +47,14 @@ function setUpSocket(server) {
 
       log(`User with socket id: ${socket.id} joined room: ${room}`);
 
+      // TODO: send increment number of users
+
       if (!rooms[room]) {
         initRoom(room);
+
+        log(`New room created: ${room}`);
+
+        // TODO: send increment number of rooms
       }
 
       const { playlist, currentPlayingVideoId } = rooms[room];
@@ -136,6 +100,8 @@ function setUpSocket(server) {
 
       log(`Socket with id: ${socket.id} disconnected.`);
 
+      // TODO: check and send decrement number of users
+
       // clean up the room data if all users left
       const socketRoom = io.sockets.adapter.rooms[room];
       if (socketRoom && socketRoom.length === 0) {
@@ -143,6 +109,8 @@ function setUpSocket(server) {
         log(`Room: ${room} is empty.`);
 
         deleteRoom(room);
+
+        // TODO: send decrement number of rooms
       }
     });
   });
