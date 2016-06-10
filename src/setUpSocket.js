@@ -5,6 +5,7 @@ import { log } from './utils';
 
 // Global state data
 const rooms = {};
+let numberOfUsers = 0;
 
 function initRoom(name) {
   rooms[name] = {
@@ -35,7 +36,11 @@ function setUpSocket(server) {
 
     log(`New connection detected with socket id: ${socket.id}`);
 
-    // TODO: send initial stats
+    // send initial stats
+    socket.emit('init stats', {
+      numberOfUsers,
+      numberOfRooms: Object.keys(rooms).length,
+    });
 
     let room = '';
 
@@ -47,14 +52,17 @@ function setUpSocket(server) {
 
       log(`User with socket id: ${socket.id} joined room: ${room}`);
 
-      // TODO: send increment number of users
+      // send increment number of users
+      numberOfUsers++;
+      socket.broadcast.emit('update user', 1);
 
       if (!rooms[room]) {
         initRoom(room);
 
         log(`New room created: ${room}`);
 
-        // TODO: send increment number of rooms
+        // send increment number of rooms
+        socket.broadcast.emit('update room', 1);
       }
 
       const { playlist, currentPlayingVideoId } = rooms[room];
@@ -100,7 +108,11 @@ function setUpSocket(server) {
 
       log(`Socket with id: ${socket.id} disconnected.`);
 
-      // TODO: check and send decrement number of users
+      // check and send decrement number of users
+      if (room) {
+        numberOfUsers--;
+        socket.broadcast.emit('update user', -1);
+      }
 
       // clean up the room data if all users left
       const socketRoom = io.sockets.adapter.rooms[room];
@@ -110,7 +122,8 @@ function setUpSocket(server) {
 
         deleteRoom(room);
 
-        // TODO: send decrement number of rooms
+        // send decrement number of rooms
+        socket.broadcast.emit('update room', -1);
       }
     });
   });

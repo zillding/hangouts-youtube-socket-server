@@ -7,12 +7,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>hangouts-youtube-socket-server</title>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.6/socket.io.min.js"></script>
 </head>
 <body>
   <h1>Hangouts YouTube Socket Server</h1>
   <p>
     This is the socket io server for <a href="https://hangouts-zillding.herokuapp.com/">hangouts app</a>.
+  </p>
+  <p>
+    Number of users: <strong id="numberOfUsers">0</strong>
+  </p>
+  <p>
+    Number of rooms: <strong id="numberOfRooms">0</strong>
   </p>
 
   <script src="main.js"></script>

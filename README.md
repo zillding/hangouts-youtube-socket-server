@@ -68,7 +68,7 @@ Following are docs for the admin stats app.
 
 #### Events fired:
 
-+ `init stat`:
++ `init stats`:
   ```
   {
     numberOfUsers: [number: number of users of hangouts app]
@@ -79,7 +79,3 @@ Following are docs for the admin stats app.
 + `update user`: `+1 | -1`
 
 + `update room`: `+1 | -1`
-
-## TODO
-
-+ Add statistics to static page (number of users, number of rooms)
