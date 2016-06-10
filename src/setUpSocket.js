@@ -108,15 +108,15 @@ function setUpSocket(server) {
 
       log(`Socket with id: ${socket.id} disconnected.`);
 
+      if (!room) return;
+
       // check and send decrement number of users
-      if (room) {
-        numberOfUsers--;
-        socket.broadcast.emit('update user', -1);
-      }
+      numberOfUsers--;
+      socket.broadcast.emit('update user', -1);
 
       // clean up the room data if all users left
       const socketRoom = io.sockets.adapter.rooms[room];
-      if (socketRoom && socketRoom.length === 0) {
+      if (!socketRoom) {
 
         log(`Room: ${room} is empty.`);
 
