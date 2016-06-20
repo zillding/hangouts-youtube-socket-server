@@ -1,7 +1,7 @@
 import { List } from 'immutable';
 import  socketIO from 'socket.io';
 
-import { log } from './utils';
+import { log, getNextVideoId } from './utils';
 
 // Global state data
 const rooms = {};
@@ -81,15 +81,9 @@ function setUpSocket(server) {
       socket.emit('welcome', {
         data: {
           playlist: rooms[room].playlist.toArray(),
+          currentPlayingVideoId: rooms[room].currentPlayingVideoId,
         },
       });
-
-      if (rooms[room].currentPlayingVideoId) {
-        socket.emit('action', {
-          type: 'PLAY',
-          data: rooms[room].currentPlayingVideoId,
-        });
-      }
     });
 
     socket.on('action', ({ type, data }) => {
@@ -104,10 +98,37 @@ function setUpSocket(server) {
 
       // store on server
       switch (type) {
-        case 'ADD_VIDEO':
+        case 'ADD_VIDEO': {
+          // if the video to be added is the only video in the playlist
+          // send the play command to play the video item
+          if (rooms[room].playlist.size === 0) {
+            const videoId = data && data.id && data.id.videoId;
+            io.in(room).emit('action', {
+              type: 'PLAY',
+              data: videoId,
+            });
+            updateData(room, 'currentPlayingVideoId', videoId);
+          }
+
           return updateData(room, 'playlist', rooms[room].playlist.push(data));
-        case 'DELETE_VIDEO':
+        }
+
+        case 'DELETE_VIDEO': {
+          // if the video to be deleted is the current playing video
+          // send the play command to play the next video item in the playlist
+          const { playlist, currentPlayingVideoId } = rooms[room];
+          if (currentPlayingVideoId === playlist.get(data).id.videoId) {
+            const nextVideoId = getNextVideoId(playlist, currentPlayingVideoId);
+            io.in(room).emit('action', {
+              type: 'PLAY',
+              data: nextVideoId,
+            });
+            updateData(room, 'currentPlayingVideoId', nextVideoId);
+          }
+
           return updateData(room, 'playlist', rooms[room].playlist.delete(data));
+        }
+
         case 'PLAY':
           return updateData(room, 'currentPlayingVideoId', data);
         default:
