@@ -30,7 +30,11 @@ Following are docs for the hangouts app.
 + `new user`:
   ```
   {
-    data: [string: roomName]
+    data: [object] {
+      roomName: [string: roomName]
+      playlist: [array: playlist array]
+      videoId: [string: current playing video id]
+    }
   }
   ```
 

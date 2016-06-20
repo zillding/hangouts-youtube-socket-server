@@ -45,9 +45,11 @@ function setUpSocket(server) {
     let room = '';
 
     socket.on('new user', ({ data }) => {
-      log(`Event [new user] received with data: ${data}`);
+      log(`Event [new user] received with data: ${JSON.stringify(data)}`);
 
-      room = data.trim() || room;
+      const { roomName, playlist, videoId } = data;
+
+      room = roomName.trim() || room;
       socket.join(room);
 
       log(`User with socket id: ${socket.id} joined room: ${room}`);
@@ -65,18 +67,27 @@ function setUpSocket(server) {
         socket.broadcast.emit('update room', 1);
       }
 
-      const { playlist, currentPlayingVideoId } = rooms[room];
+      // update room data
+      // TODO: override the room data, may consider using merge
+      // for better implementation in the future
+      if (playlist.length > 0) {
+        updateData(room, 'playlist', List(playlist));
+      }
+
+      if (videoId) {
+        updateData(room, 'currentPlayingVideoId', videoId);
+      }
 
       socket.emit('welcome', {
         data: {
-          playlist: playlist.toArray(),
+          playlist: rooms[room].playlist.toArray(),
         },
       });
 
-      if (currentPlayingVideoId) {
+      if (rooms[room].currentPlayingVideoId) {
         socket.emit('action', {
           type: 'PLAY',
-          data: currentPlayingVideoId,
+          data: rooms[room].currentPlayingVideoId,
         });
       }
     });
