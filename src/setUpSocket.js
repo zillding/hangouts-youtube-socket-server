@@ -1,48 +1,29 @@
-import { List } from 'immutable';
-import  socketIO from 'socket.io';
+import socketIO from 'socket.io';
 
+import * as actions from './actions';
+import * as selectors from './selectors';
 import { log, getNextVideoId } from './utils';
 
-// Global state data
-const rooms = {};
-let numberOfUsers = 0;
-
-function initRoom(name) {
-  rooms[name] = {
-    playlist: List(),
-    currentPlayingVideoId: '',
-  };
-}
-
-function deleteRoom(name) {
-  if (rooms[name]) {
-    delete rooms[name];
-  }
-}
-
-// mutate the global state
-function updateData(room, field, data) {
-  if (rooms[room]) {
-    rooms[room][field] = data;
-  }
-}
-
-function setUpSocket(server) {
+function setUpSocket(server, store) {
   const io = socketIO(server);
 
-  log('Socket done set up.');
+  log('Set up socket!');
 
   io.on('connection', socket => {
 
     log(`New connection detected with socket id: ${socket.id}`);
 
     // send initial stats
+    const state = store.getState();
     socket.emit('init stats', {
-      numberOfUsers,
-      numberOfRooms: Object.keys(rooms).length,
+      numberOfUsers: selectors.getNumberOfUsers(state),
+      numberOfRooms: selectors.getNumberOfRooms(state),
     });
 
     let room = '';
+    let getRoom = null;
+    let getPlaylist = null;
+    let getVideoId = null;
 
     socket.on('new user', ({ data }) => {
       log(`Event [new user] received with data: ${JSON.stringify(data)}`);
@@ -55,11 +36,15 @@ function setUpSocket(server) {
       log(`User with socket id: ${socket.id} joined room: ${room}`);
 
       // send increment number of users
-      numberOfUsers++;
+      store.dispatch(actions.incrementUsers());
       socket.broadcast.emit('update user', 1);
 
-      if (!rooms[room]) {
-        initRoom(room);
+      getRoom = selectors.createGetRoom(room);
+      getPlaylist = selectors.createGetPlaylist(room);
+      getVideoId = selectors.createGetVideoId(room);
+
+      if (!getRoom(store.getState())) {
+        store.dispatch(actions.initRoom(room));
 
         log(`New room created: ${room}`);
 
@@ -71,17 +56,17 @@ function setUpSocket(server) {
       // TODO: override the room data, may consider using merge
       // for better implementation in the future
       if (playlist.length > 0) {
-        updateData(room, 'playlist', List(playlist));
+        store.dispatch(actions.setPlaylist(room, playlist));
       }
 
       if (videoId) {
-        updateData(room, 'currentPlayingVideoId', videoId);
+        store.dispatch(actions.setVideoId(room, videoId));
       }
 
       socket.emit('welcome', {
         data: {
-          playlist: rooms[room].playlist.toArray(),
-          currentPlayingVideoId: rooms[room].currentPlayingVideoId,
+          playlist: getPlaylist(store.getState()).toArray(),
+          currentPlayingVideoId: getVideoId(store.getState()),
         },
       });
     });
@@ -101,36 +86,38 @@ function setUpSocket(server) {
         case 'ADD_VIDEO': {
           // if the video to be added is the only video in the playlist
           // send the play command to play the video item
-          if (rooms[room].playlist.size === 0) {
+          if (getPlaylist(store.getState()).size === 0) {
             const videoId = data && data.id && data.id.videoId;
             io.in(room).emit('action', {
               type: 'PLAY',
               data: videoId,
             });
-            updateData(room, 'currentPlayingVideoId', videoId);
+            store.dispatch(actions.setVideoId(room, videoId));
           }
 
-          return updateData(room, 'playlist', rooms[room].playlist.push(data));
+          return store.dispatch(actions.addVideo(room, data));
         }
 
         case 'DELETE_VIDEO': {
           // if the video to be deleted is the current playing video
           // send the play command to play the next video item in the playlist
-          const { playlist, currentPlayingVideoId } = rooms[room];
+          const state = store.getState();
+          const playlist = getPlaylist(state);
+          const currentPlayingVideoId = getVideoId(state);
           if (currentPlayingVideoId === playlist.get(data).id.videoId) {
             const nextVideoId = getNextVideoId(playlist, currentPlayingVideoId);
             io.in(room).emit('action', {
               type: 'PLAY',
               data: nextVideoId,
             });
-            updateData(room, 'currentPlayingVideoId', nextVideoId);
+            store.dispatch(actions.setVideoId(room, nextVideoId));
           }
 
-          return updateData(room, 'playlist', rooms[room].playlist.delete(data));
+          return store.dispatch(actions.deleteVideo(room, data));
         }
 
         case 'PLAY':
-          return updateData(room, 'currentPlayingVideoId', data);
+          return store.dispatch(actions.setVideoId(room, data));
         default:
           return null;
       }
@@ -143,7 +130,7 @@ function setUpSocket(server) {
       if (!room) return;
 
       // check and send decrement number of users
-      numberOfUsers--;
+      store.dispatch(actions.decrementUsers());
       socket.broadcast.emit('update user', -1);
 
       // clean up the room data if all users left
@@ -152,7 +139,7 @@ function setUpSocket(server) {
 
         log(`Room: ${room} is empty.`);
 
-        deleteRoom(room);
+        store.dispatch(actions.deleteRoom(room));
 
         // send decrement number of rooms
         socket.broadcast.emit('update room', -1);
