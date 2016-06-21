@@ -4,7 +4,7 @@ import * as actions from './actions';
 import * as selectors from './selectors';
 import { log, getNextVideoId } from './utils';
 
-function setUpSocket(server, store) {
+export default function setUpSocket(server, store) {
   const io = socketIO(server);
 
   log('Set up socket!');
@@ -25,31 +25,26 @@ function setUpSocket(server, store) {
     let getPlaylist = null;
     let getVideoId = null;
 
-    socket.on('new user', ({ data }) => {
-      log(`Event [new user] received with data: ${JSON.stringify(data)}`);
+    socket.on('new user', ({ data } = {}) => {
+      // validate data
+      if (invalidNewUser(data)) return;
 
       const { roomName, playlist, videoId } = data;
 
-      room = roomName.trim() || room;
+      room = roomName.trim();
       socket.join(room);
 
       log(`User with socket id: ${socket.id} joined room: ${room}`);
 
       // send increment number of users
-      store.dispatch(actions.incrementUsers());
-      socket.broadcast.emit('update user', 1);
+      store.dispatch(actions.incrementUsers(socket));
 
       getRoom = selectors.createGetRoom(room);
       getPlaylist = selectors.createGetPlaylist(room);
       getVideoId = selectors.createGetVideoId(room);
 
       if (!getRoom(store.getState())) {
-        store.dispatch(actions.initRoom(room));
-
-        log(`New room created: ${room}`);
-
-        // send increment number of rooms
-        socket.broadcast.emit('update room', 1);
+        store.dispatch(actions.initRoom(room, socket));
       }
 
       // update room data
@@ -71,9 +66,9 @@ function setUpSocket(server, store) {
       });
     });
 
-    socket.on('action', ({ type, data }) => {
+    socket.on('action', ({ type, data } = {}) => {
 
-      log(`Event [action] received with type: ${type}`);
+      if (invalidAction(type, data)) return;
 
       io.in(room).emit('action', {
         type,
@@ -130,22 +125,80 @@ function setUpSocket(server, store) {
       if (!room) return;
 
       // check and send decrement number of users
-      store.dispatch(actions.decrementUsers());
-      socket.broadcast.emit('update user', -1);
+      store.dispatch(actions.decrementUsers(socket));
 
       // clean up the room data if all users left
       const socketRoom = io.sockets.adapter.rooms[room];
       if (!socketRoom) {
-
-        log(`Room: ${room} is empty.`);
-
-        store.dispatch(actions.deleteRoom(room));
-
-        // send decrement number of rooms
-        socket.broadcast.emit('update room', -1);
+        store.dispatch(actions.deleteRoom(room, socket));
       }
     });
   });
 }
 
-export default setUpSocket;
+function invalidNewUser(data) {
+  log(`Event [new user] received with data: ${JSON.stringify(data)}`);
+  if (!data) return true;
+  if (invalidRoomName(data.roomName)) return true;
+  if (invalidPlaylist(data.playlist)) return true;
+  if (invalidVideoId(data.videoId)) return true;
+  return false;
+}
+
+function invalidRoomName(roomName) {
+  if (typeof roomName !== 'string' || !roomName.trim()) {
+    log(`Invalide room name: ${roomName}`);
+    return true;
+  }
+
+  return false;
+}
+
+function invalidPlaylist(playlist) {
+  if (!playlist || !Array.isArray(playlist)) {
+    log(`Invalid playlist: ${playlist}`);
+    return true;
+  }
+
+  return false;
+}
+
+function invalidVideoId(videoId) {
+  if (typeof videoId !== 'string') {
+    log(`Invalid video id: ${videoId}`);
+    return true;
+  }
+
+  return false;
+}
+
+function invalidAction(type, data) {
+  log(`Event [action] received with type: ${type} and data: ${JSON.stringify(data)}`);
+
+  switch (type) {
+    case 'PLAY_NEXT':
+    case 'PLAY_PREVIOUS':
+    case 'PAUSE':
+    case 'RESUME':
+      return false;
+    case 'ADD_VIDEO':
+    case 'DELETE_VIDEO':
+    case 'PLAY':
+    case 'SYNC_TIME':
+      break;
+    default:
+      return true;
+  }
+
+  if (type === 'ADD_VIDEO' &&
+    data && data.id && typeof data.id.videoId === 'string') return false;
+
+  if (type === 'DELETE_VIDEO' && typeof data === 'number') return false;
+
+  if (type === 'PLAY' && typeof data === 'string') return false;
+
+  if (type === 'SYNC_TIME' && typeof data === 'number') return false;
+
+  log(`Invalid action data: ${data}`);
+  return true;
+}

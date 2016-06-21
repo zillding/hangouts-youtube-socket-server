@@ -1,19 +1,23 @@
-export const incrementUsers = () => ({
+export const incrementUsers = socket => ({
   type: 'USERS_INCREMENT',
+  socket,
 });
 
-export const decrementUsers = () => ({
+export const decrementUsers = socket => ({
   type: 'USERS_DECREMENT',
+  socket,
 });
 
-export const initRoom = roomName => ({
+export const initRoom = (roomName, socket) => ({
   type: 'ROOM_INIT',
   roomName,
+  socket,
 });
 
-export const deleteRoom = roomName => ({
+export const deleteRoom = (roomName, socket) => ({
   type: 'ROOM_DELETE',
   roomName,
+  socket,
 });
 
 export const setPlaylist = (roomName, data) => ({
